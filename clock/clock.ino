@@ -4,7 +4,19 @@ DS3231 Clock;
 #define Down A1
 #define Up A2
 #define Mode A3
-int sec;
+#define AlMode A0
+#define pinA 2
+#define pinB 3
+#define pinC 4
+#define pinD 5
+#define pinE 6
+#define pinF 7
+#define pinG 8
+#define C1 9
+#define C2 10
+#define C3 11
+#define C4 12
+int sec,hr;
 struct Alarm{
   int hour,minute;
   bool active,set;
@@ -15,8 +27,7 @@ bool Century=false,h12,PM;
 int mode;
 void setup() {
   Wire.begin();
-  Serial.begin(9600);
-  sec=-1;
+  //Serial.begin(9600);
   mode=0;
   al[1].hour=0;
   al[1].minute=1;
@@ -43,53 +54,59 @@ void setup() {
   pinMode(mode,INPUT);
   pinMode(Up,INPUT);
   pinMode(Down,INPUT);
+  pinMode(pinA,OUTPUT);
+  pinMode(pinB,OUTPUT);
+  pinMode(pinC,OUTPUT);
+  pinMode(pinD,OUTPUT);
+  pinMode(pinE,OUTPUT);
+  pinMode(pinF,OUTPUT);
+  pinMode(pinG,OUTPUT);
+  pinMode(C4,OUTPUT);
+  pinMode(C3,OUTPUT);
+  pinMode(C2,OUTPUT);
+  pinMode(C1,OUTPUT);
+  pinMode(13,OUTPUT);
 
 }
 
 void loop() {
   //Serial.print(Clock.getDate());
-  int i;
+  bool dot=true;
+  int i,sec=-1,hr=-1,m=-1;
   if (mode==0)
   {
     if(sec!=Clock.getSecond())
     {
-      switch(Clock.getDoW())
-      {
-        case 1:Serial.print("Sunday");
-                break;
-        case 2:Serial.print("Monday");
-                break;
-        case 3:Serial.print("Tuesday");
-                break;
-        case 4:Serial.print("Wednesday");
-                break;
-        case 5:Serial.print("Thursday");
-                break;
-        case 6:Serial.print("Friday");
-                break;
-        case 7:Serial.print("Saturday");
-                break;
-      }
-      Serial.print(" ");
-      Serial.print(Clock.getHour(h12,PM));
+      /*Serial.print(Clock.getHour(h12,PM));
       Serial.print(":");
       Serial.print(Clock.getMinute());
-      Serial.print(":");
+      Serial.print(":");*/
       sec=Clock.getSecond();
-      Serial.print(sec);
+      /*Serial.print(sec);
       Serial.print(" ");
       Serial.print(Clock.getDate());
       Serial.print("/");
       Serial.print(Clock.getMonth(Century));
       Serial.print("/");
-      Serial.println(Clock.getYear()+2000);
+      Serial.println(Clock.getYear()+2000);*/
     }
+    if(hr!=Clock.getHour(h12,PM))
+      hr=Clock.getHour(h12,PM);
+    if(m!=Clock.getMinute())
+      m=Clock.getMinute();
     for(i=0;i<2;i++)
     {
       if(al[i].set&&(checkal(i)||al[i].active))
       alarm(i);
     }
-    
+    if(sec%2)
+    {
+      digitalWrite(13,HIGH);
+    }
+    else
+      digitalWrite(13,LOW);
+    disp(hr,1);
+    disp(m,3);
   }
   else if(mode==1)
   {
@@ -97,19 +114,19 @@ void loop() {
   }
   else if(mode==2)
     alset();
-  if(mode==0&&analogRead(A3)>=900)
+  if(mode==0&&analogRead(Mode)>=900)
   {
     delay(1000);
     mode=1;
-    Serial.print("Mode:");
-    Serial.println(mode);
+    //Serial.print("Mode:");
+    //Serial.println(mode);
   }
-  if(mode==0&&analogRead(A0)>=800)
+  if(mode==0&&analogRead(AlMode)>=800)
   {
     delay(1000);
     mode=2;
-    Serial.print("Mode:");
-    Serial.println(mode);
+    //Serial.print("Mode:");
+    //Serial.println(mode);
   }
 }
 
@@ -124,11 +141,17 @@ bool checkal(int i)
 }
 void alarm(int i)
 {
-  Serial.println("Alarm");
-  if(analogRead(A0)>=800)
+  //Serial.println("Alarm");
+    if(Clock.getSecond()%2){
+  dispal();
+  disp(i,3);
+    }
+    else
+    disp(0,4);
+  if(analogRead(AlMode)>=800)
   {
     delay(1000);
-    analogRead(A0);
+    analogRead(AlMode);
     al[i].active=false;
     al[i].minute+=5;
     if(al[i].minute>=60)
@@ -137,10 +160,10 @@ void alarm(int i)
       al[i].hour++;
     }
   }
-  if((analogRead(A3)>=900)||(((al[i].minute+1)==60)?0:al[i].minute+1==Clock.getMinute()))
+  if((analogRead(Mode)>=900)||(((al[i].minute+1)==60)?0:al[i].minute+1==Clock.getMinute()))
   {   
       delay(1000);
-      analogRead(A3);
+      analogRead(Mode);
       al[i].active=false;
       al[i].set=false;
   }
@@ -150,16 +173,21 @@ void set()
   static int mode=0,h=Clock.getHour(h12,PM),m=Clock.getMinute();
   if(mode==0)
   {
-    Serial.print("Hour: ");
-    Serial.println(h);
-    if(analogRead(A2)>=800)
+    //Serial.print("Hour: ");
+    disp(m,3);
+    if(Clock.getSecond()%2)
+    disp(h,1);
+    else
+    disp(0,4);
+    //Serial.println(h);
+    if(analogRead(Up)>=800)
     {
       delay(1000);
       h++;
       if(h==24)
         h=0;
     }
-    else if(analogRead(A1)>=800)
+    else if(analogRead(Down)>=800)
     {
       delay(1000);
       h--;
@@ -169,16 +197,21 @@ void set()
   }
   else if(mode==1)
   {
-    Serial.print("Minute: ");
-    Serial.println(m);
-    if(analogRead(A2)>=800)
+    //Serial.print("Minute: ");
+    //Serial.println(m);
+    disp(h,1);
+    if(Clock.getSecond()%2)
+    disp(m,3);
+    else
+    disp(0,4);
+    if(analogRead(Up)>=800)
     {
       delay(1000);
       m++;
       if(m==60)
         m=0;
     }
-    else if(analogRead(A1)>=800)
+    else if(analogRead(Down)>=800)
     {
       delay(1000);
       m--;
@@ -186,7 +219,7 @@ void set()
         m=59;
     }
   }
-  if(analogRead(A3)>=900)
+  if(analogRead(Mode)>=900)
   {
     delay(1000);
     if(mode==0)
@@ -203,7 +236,7 @@ void set()
       Clock.setSecond(second);
       mode--;
       ::mode=0;
-      Serial.println(::mode);
+      //Serial.println(::mode);
       delay(1000);
       return;
     }
@@ -216,17 +249,22 @@ void alset()
     mode=0;
   if(mode==0)
   {
-    Serial.print(a);
-    Serial.print("AlHour: ");
-    Serial.println(h);
-    if(analogRead(A2)>=800)
+    //Serial.print(a);
+    //Serial.print("AlHour: ");
+    //Serial.println(h);
+    disp(m,3);
+    if(Clock.getSecond()%2)
+    disp(h,1);
+    else
+    disp(0,4);
+    if(analogRead(Up)>=800)
     {
       delay(1000);
       h++;
       if(h==24)
         h=0;
     }
-    else if(analogRead(A1)>=800)
+    else if(analogRead(Down)>=800)
     {
       delay(1000);
       h--;
@@ -236,17 +274,22 @@ void alset()
   }
   else if(mode==1)
   {
-    Serial.print(a);
-    Serial.print("AlMinute: ");
-    Serial.println(m);
-    if(analogRead(A2)>=800)
+    //Serial.print(a);
+    //Serial.print("AlMinute: ");
+    //Serial.println(m);
+    disp(h,1);
+    if(Clock.getSecond()%2)
+    disp(m,3);
+    else
+    disp(0,4);
+    if(analogRead(Up)>=800)
     {
       delay(1000);
       m++;
       if(m==60)
         m=0;
     }
-    else if(analogRead(A1)>=800)
+    else if(analogRead(Down)>=800)
     {
       delay(1000);
       m--;
@@ -254,7 +297,7 @@ void alset()
         m=59;
     }
   }
-  if(analogRead(A3)>=800)
+  if(analogRead(Mode)>=800)
   {
     delay(1000);
     if(mode==0)
@@ -268,12 +311,12 @@ void alset()
       al[a].set=true;
       mode++;
       ::mode=0;
-      Serial.println(::mode);
+      //Serial.println(::mode);
       delay(1000);
       return; 
     }
   }
-  if(analogRead(A0)>=800)
+  if(analogRead(AlMode)>=800)
   {
       delay(1000);
       mode=0;
@@ -281,4 +324,159 @@ void alset()
       if(a==2)
         a=0;
   }
+}
+
+void disp(int num,int dig)
+{
+  if(num>9)
+  {
+  disp(num/10,dig-1);
+  num=num%10;
+  }
+  else if(dig%2)
+    disp(0,dig-1);
+  digitalWrite(C1, LOW);
+  digitalWrite(C2, LOW);
+  digitalWrite(C3, LOW);
+  digitalWrite(C4, LOW);
+  if(num==0)
+  {
+    digitalWrite(pinA, LOW);   
+    digitalWrite(pinB, LOW);   
+    digitalWrite(pinC, LOW);   
+    digitalWrite(pinD, LOW);   
+    digitalWrite(pinE, LOW);   
+    digitalWrite(pinF, LOW);   
+    digitalWrite(pinG, HIGH);  
+  }
+  else if(num==1)
+  {
+    digitalWrite(pinA, HIGH);   
+    digitalWrite(pinB, LOW);   
+    digitalWrite(pinC, LOW);   
+    digitalWrite(pinD, HIGH);   
+    digitalWrite(pinE, HIGH);   
+    digitalWrite(pinF, HIGH);   
+    digitalWrite(pinG, HIGH); 
+  }
+  else if(num==2)
+  {
+    digitalWrite(pinC, HIGH);   
+  digitalWrite(pinE, LOW);   
+  digitalWrite(pinA, LOW);   
+  digitalWrite(pinD, LOW);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinF, HIGH);   
+  digitalWrite(pinG, LOW);  
+  }
+  else if(num==3)
+  {
+      digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, LOW);   
+  digitalWrite(pinE, HIGH);   
+  digitalWrite(pinF, HIGH);   
+  digitalWrite(pinG, LOW);
+  }
+  else if(num==4)
+  {
+    digitalWrite(pinA, HIGH);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, HIGH);   
+  digitalWrite(pinE, HIGH);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, LOW);
+  }
+  else if(num==5)
+  {
+      digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, HIGH);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, LOW);   
+  digitalWrite(pinE, HIGH);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, LOW);  
+  }
+  else if(num==6)
+  {
+      digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, HIGH);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, LOW);   
+  digitalWrite(pinE, LOW);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, LOW);  
+  }
+  else if(num==7)
+  {
+      digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, HIGH);   
+  digitalWrite(pinE, HIGH);   
+  digitalWrite(pinF, HIGH);   
+  digitalWrite(pinG, HIGH);  
+  }
+  else if(num==8)
+  {
+      digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, LOW);   
+  digitalWrite(pinE, LOW);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, LOW); 
+  }
+  else if(num==9)
+  {
+      digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, HIGH);   
+  digitalWrite(pinE, HIGH);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, LOW);
+  }
+  if(dig==0)
+      digitalWrite(C1, HIGH);
+  else if(dig==1)
+      digitalWrite(C2, HIGH);
+  else if(dig==2)
+      digitalWrite(C3, HIGH);
+  else if(dig==3)
+      digitalWrite(C4, HIGH);
+  else
+  {
+  digitalWrite(C1, LOW);
+  digitalWrite(C2, LOW);
+  digitalWrite(C3, LOW);
+  digitalWrite(C4, LOW);
+    
+  }
+}
+
+void dispal()
+{
+  digitalWrite(C2, LOW);
+  digitalWrite(C3, LOW);
+  digitalWrite(C4, LOW);
+  digitalWrite(C1, HIGH);
+  digitalWrite(pinA, LOW);   
+  digitalWrite(pinB, LOW);   
+  digitalWrite(pinC, LOW);   
+  digitalWrite(pinD, HIGH);   
+  digitalWrite(pinE, LOW);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, LOW);
+  digitalWrite(C1, LOW);
+  digitalWrite(C2, HIGH);
+  digitalWrite(pinA, HIGH);   
+  digitalWrite(pinB, HIGH);   
+  digitalWrite(pinC, HIGH);   
+  digitalWrite(pinD, LOW);   
+  digitalWrite(pinE, LOW);   
+  digitalWrite(pinF, LOW);   
+  digitalWrite(pinG, HIGH);
 }
